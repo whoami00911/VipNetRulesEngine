@@ -38,26 +38,20 @@ func (h *Handlers) UploadFileHandler(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Создаём сканер для чтения файла построчно
 	scanner := bufio.NewScanner(file)
 
-	// Хранение результатов: ключ – название слоя, значение – срез строк данных
 	layers := make(map[string][]string)
 	var currentLayer string
 
-	// Читаем файл построчно
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		// Пропускаем пустые строки
 		if line == "" {
 			continue
 		}
-		// Если строка начинается с //, то это заголовок слоя
 		if strings.HasPrefix(line, "//") {
-			// Убираем префикс "//" и лишние пробелы
 			currentLayer = strings.TrimSpace(strings.TrimPrefix(line, "//"))
 			fmt.Println(currentLayer)
-			// Инициализируем срез для этого слоя
+
 			layers[currentLayer] = []string{}
 		} else {
 			// Если уже найден слой, добавляем строку в его срез
@@ -77,7 +71,7 @@ func (h *Handlers) UploadFileHandler(c *gin.Context) {
 				layers[currentLayer] = append(layers[currentLayer], fmt.Sprintf(`alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"Malware File Detected - md5 Hash Match"; protected_content:"%s"; hash:md5; length:4; classtype:trojan-activity;)`, line))
 				layers[currentLayer] = append(layers[currentLayer], fmt.Sprintf(`alert udp $HOME_NET any -> $EXTERNAL_NET any (msg:"Malware File Detected - md5 Hash Match"; protected_content:"%s"; hash:md5; length:4; classtype:trojan-activity;)`, line))
 			} else {
-				h.logger.Error("Someone shiteater upload their shit file stupid fuck")
+				h.logger.Error("не грузить хуйню")
 			}
 		}
 	}
@@ -90,7 +84,6 @@ func (h *Handlers) UploadFileHandler(c *gin.Context) {
 
 	writer := bufio.NewWriter(outputFile)
 
-	// Записываем только содержимое слоев, игнорируя заголовки
 	for _, content := range layers {
 		for _, line := range content {
 			if _, err := writer.WriteString(line + "\n"); err != nil {
@@ -98,14 +91,13 @@ func (h *Handlers) UploadFileHandler(c *gin.Context) {
 				return
 			}
 		}
-		// Разделяем группы пустой строкой (при необходимости)
+
 		if _, err := writer.WriteString("\n"); err != nil {
 			h.logger.Error(fmt.Sprintf("Error writing to file: %s", err))
 			return
 		}
 	}
 
-	// Сбрасываем буфер
 	if err := writer.Flush(); err != nil {
 		h.logger.Error(fmt.Sprintf("Error cleaning buffer: %s", err))
 		return
